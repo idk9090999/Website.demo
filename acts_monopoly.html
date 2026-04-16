@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acts — The Board Game</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #c9a84c;
+  --gold-dark: #8a6a1e;
+  --parchment: #f5f0e8;
+  --ink: #1a1208;
+  --board-bg: #fffdf5;
+  --cb: #a08030;
+}
+body {
+  background: #111;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 8px 40px;
+  font-family: Georgia, serif;
+  color: var(--ink);
+}
+h1 { color: var(--gold); font-size: clamp(20px,4vw,38px); letter-spacing:.2em; text-align:center; margin-bottom:4px; }
+.sub { font-style:italic; color:#b89a50; font-size:clamp(11px,1.8vw,16px); text-align:center; margin-bottom:14px; }
+.ctrls { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; justify-content:center; }
+.btn { padding:7px 16px; border:2px solid var(--gold); border-radius:4px; background:transparent; color:var(--gold); font-family:Georgia,serif; font-size:13px; cursor:pointer; transition:all .15s; }
+.btn:hover { background:var(--gold); color:#111; }
+.wrap { border:4px solid var(--gold); padding:5px; background:#1a1208; width:100%; max-width:860px; }
+.board {
+  display: grid;
+  background: var(--board-bg);
+  border: 2px solid var(--gold-dark);
+  width: 100%;
+  aspect-ratio: 1/1;
+}
+.cell {
+  border: 1px solid var(--cb);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  padding: 1px;
+  cursor: pointer;
+  position: relative;
+  background: var(--board-bg);
+  overflow: hidden;
+  transition: filter .15s;
+}
+.cell:hover { filter: brightness(.88); }
+.stripe { width:100%; height:5px; flex-shrink:0; }
+.cnum { font-size:clamp(5px,.7vw,9px); font-weight:bold; color:var(--gold-dark); line-height:1.1; margin-top:1px; }
+.cicon { font-size:clamp(9px,1.2vw,15px); line-height:1.2; }
+.ctext { font-size:clamp(4px,.6vw,8px); line-height:1.25; color:var(--ink); padding:0 1px; white-space:pre-line; text-align:center; }
+.corner { justify-content:center; }
+.corner .cnum { font-size:clamp(7px,.9vw,12px); }
+.corner .cicon { font-size:clamp(14px,2vw,22px); }
+.corner .ctext { font-size:clamp(6px,.8vw,10px); }
+.side-left  { writing-mode:vertical-lr; transform:rotate(180deg); }
+.side-right { writing-mode:vertical-lr; }
+.side-left .stripe, .side-right .stripe { width:5px; height:100%; }
+.bg-green { background:#d8f0d8; }
+.bg-red   { background:#f8d8d8; }
+.bg-blue  { background:#d0e4f8; }
+.bg-gold  { background:#fef5d8; }
+.bg-jail  { background:#e0d8c0; }
+.bg-start { background:#fffce0; }
+.bg-gspec { background:#b8e0b8; }
+.center {
+  border:1px solid var(--cb);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:7px; background:var(--board-bg); padding:10px;
+}
+.ctitle { font-size:clamp(18px,2.8vw,34px); font-weight:bold; color:var(--gold-dark); letter-spacing:.15em; }
+.csub { font-style:italic; font-size:clamp(8px,1.1vw,13px); color:#7a5e2a; text-align:center; }
+.decks { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.deck { border:1.5px solid var(--gold-dark); border-radius:4px; padding:5px 9px; cursor:pointer; background:var(--parchment); text-align:center; transition:transform .15s; min-width:64px; }
+.deck:hover { transform:translateY(-2px); }
+.dlabel { display:block; font-size:clamp(7px,.9vw,11px); font-weight:bold; color:var(--gold-dark); margin-top:2px; }
+.dicon { font-size:clamp(12px,1.8vw,20px); }
+.deck-f { border-color:#1a3a8b; }
+.deck-f .dlabel { color:#1a3a8b; }
+.deck-c { border-color:#8b1a1a; }
+.deck-c .dlabel { color:#8b1a1a; }
+.dice { display:flex; gap:8px; align-items:center; }
+.die { width:clamp(26px,3.5vw,42px); height:clamp(26px,3.5vw,42px); border:2px solid var(--gold-dark); border-radius:6px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:clamp(14px,2vw,22px); font-weight:bold; color:var(--ink); box-shadow:2px 2px 0 var(--gold-dark); }
+.mrow { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.mtag { font-size:clamp(8px,1vw,12px); border:1.5px solid var(--gold); border-radius:3px; padding:2px 7px; color:var(--gold-dark); background:var(--parchment); }
+.vquote { font-style:italic; font-size:clamp(6px,.85vw,10px); color:#7a5e2a; text-align:center; max-width:85%; line-height:1.4; }
+.token { position:absolute; width:clamp(7px,1vw,13px); height:clamp(7px,1vw,13px); border-radius:50%; border:1.5px solid rgba(0,0,0,.5); z-index:10; pointer-events:none; }
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:200; align-items:center; justify-content:center; }
+.modal-bg.open { display:flex; }
+.modal { background:var(--parchment); border:3px solid var(--gold); border-radius:8px; padding:22px 26px; max-width:380px; width:90%; position:relative; font-family:Georgia,serif; }
+.modal h2 { color:var(--gold-dark); font-size:18px; margin-bottom:10px; text-align:center; }
+.modal p { font-size:14px; line-height:1.6; margin-bottom:6px; color:var(--ink); }
+.modal .verse { font-style:italic; font-size:12px; color:#6a4e1e; border-left:3px solid var(--gold); padding-left:9px; margin:8px 0; }
+.mx { position:absolute; top:9px; right:13px; background:none; border:none; font-size:18px; cursor:pointer; color:var(--gold-dark); }
+.mok { margin-top:13px; width:100%; padding:9px; border:2px solid var(--gold-dark); border-radius:4px; background:var(--gold-dark); color:var(--parchment); font-family:Georgia,serif; font-size:14px; cursor:pointer; }
+.mok:hover { background:var(--gold); }
+.log { width:100%; max-width:860px; background:#1a1208; border:1px solid var(--gold-dark); border-radius:4px; padding:7px 13px; margin-top:10px; font-style:italic; font-size:13px; color:var(--gold); min-height:34px; }
+</style>
+</head>
+<body>
+<h1>ACTS</h1>
+<div class="sub">A Journey Through the Early Church</div>
+<div class="ctrls">
+  <button class="btn" id="btnAdd">+ Add Player</button>
+  <button class="btn" id="btnRoll">&#127922; Roll Dice</button>
+  <button class="btn" id="btnNext">Next Turn &rarr;</button>
+</div>
+<div class="wrap"><div class="board" id="board"></div></div>
+<div class="log" id="log">Welcome! Add players, then roll to begin.</div>
+<div class="modal-bg" id="modalbg">
+  <div class="modal">
+    <button class="mx" id="modalx">&#10005;</button>
+    <h2 id="mtitle"></h2>
+    <div id="mbody"></div>
+    <button class="mok" id="mok">Continue</button>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+
+var SPACES=[null,
+{n:1, label:"START\n+$5",bg:"bg-start",icon:"&#9758;",stripe:"#b8940a",type:"start",amount:5,verse:"Acts 1:8 \u2014 You will receive power when the Holy Spirit comes on you."},
+{n:2, label:"Move 5\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:5},
+{n:3, label:"Draw\nItem Card",bg:"",icon:"&#128230;",stripe:"#5a3a00",type:"item"},
+{n:4, label:"Nothing",bg:"",icon:"\u2014",stripe:"#aaa",type:"nothing"},
+{n:5, label:"Move 2\nBackward",bg:"bg-red",icon:"&#9660;",stripe:"#8b1a1a",type:"move",dir:-1,delta:2},
+{n:6, label:"Back\nto Start",bg:"bg-blue",icon:"&#8617;",stripe:"#1a3a8b",type:"backstart"},
+{n:7, label:"Move 1\nBackward",bg:"bg-red",icon:"&#9660;",stripe:"#8b1a1a",type:"move",dir:-1,delta:1},
+{n:8, label:"Nothing",bg:"",icon:"\u2014",stripe:"#aaa",type:"nothing"},
+{n:9, label:"Draw\nItem Card",bg:"",icon:"&#128230;",stripe:"#5a3a00",type:"item"},
+{n:10,label:"Move 1\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:1},
+{n:11,label:"JAIL\n1 Round",bg:"bg-jail",icon:"&#9939;",stripe:"#4a3a10",type:"jail",verse:"Acts 16:23 \u2014 They threw them into prison."},
+{n:12,label:"Move 1\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:1},
+{n:13,label:"Move 3\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:3},
+{n:14,label:"Move 1\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:1},
+{n:15,label:"Move 4\nBackward",bg:"bg-red",icon:"&#9660;",stripe:"#8b1a1a",type:"move",dir:-1,delta:4},
+{n:16,label:"+$1",bg:"bg-blue",icon:"$",stripe:"#1a3a8b",type:"money",amount:1,verse:"Acts 3:6 \u2014 Silver or gold I do not have, but what I have I give you."},
+{n:17,label:"Nothing",bg:"",icon:"\u2014",stripe:"#aaa",type:"nothing"},
+{n:18,label:"Move 2\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:2},
+{n:19,label:"Draw\nFaith Card",bg:"",icon:"&#10013;",stripe:"#1a3a8b",type:"faith",verse:"Acts 14:22 \u2014 Remain true to the faith."},
+{n:20,label:"Draw\nFaith Card",bg:"",icon:"&#10013;",stripe:"#1a3a8b",type:"faith"},
+{n:21,label:"Trade\n$2=Item\n$3=Faith",bg:"bg-gold",icon:"&#8652;",stripe:"#8a6a1e",type:"trade"},
+{n:22,label:"Nothing",bg:"",icon:"\u2014",stripe:"#aaa",type:"nothing"},
+{n:23,label:"Move 2\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:2},
+{n:24,label:"Draw\nFaith Card",bg:"",icon:"&#10013;",stripe:"#1a3a8b",type:"faith"},
+{n:25,label:"Teleport\nto Blue 16",bg:"bg-blue",icon:"&#9889;",stripe:"#1a3a8b",type:"teleport",target:16,verse:"Acts 8:39 \u2014 The Spirit of the Lord suddenly took Philip away."},
+{n:26,label:"Draw\nContingency",bg:"",icon:"&#9878;",stripe:"#8b1a1a",type:"contingency"},
+{n:27,label:"Move 1\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:1},
+{n:28,label:"Draw\nFaith Card",bg:"",icon:"&#10013;",stripe:"#1a3a8b",type:"faith"},
+{n:29,label:"Nothing",bg:"",icon:"\u2014",stripe:"#aaa",type:"nothing"},
+{n:30,label:"Move 1\nBackward",bg:"bg-red",icon:"&#9660;",stripe:"#8b1a1a",type:"move",dir:-1,delta:1},
+{n:31,label:"Trade\n$5=Item\n$2=Faith",bg:"bg-gold",icon:"&#8652;",stripe:"#8a6a1e",type:"trade"},
+{n:32,label:"Draw\nContingency",bg:"",icon:"&#9878;",stripe:"#8b1a1a",type:"contingency"},
+{n:33,label:"Nothing",bg:"",icon:"\u2014",stripe:"#aaa",type:"nothing"},
+{n:34,label:"Move 3\nForward",bg:"bg-green",icon:"&#9650;",stripe:"#2d6a2d",type:"move",dir:1,delta:3},
+{n:35,label:"Draw\nContingency",bg:"",icon:"&#9878;",stripe:"#8b1a1a",type:"contingency",verse:"Acts 27:22 \u2014 Keep up your courage, not one of you will be lost."},
+{n:36,label:"Move 2\nBackward",bg:"bg-red",icon:"&#9660;",stripe:"#8b1a1a",type:"move",dir:-1,delta:2},
+{n:37,label:"Nothing\n(+$5)",bg:"bg-gspec",icon:"$",stripe:"#1a6a1a",type:"money",amount:5,verse:"Acts 20:35 \u2014 It is more blessed to give than to receive."},
+{n:38,label:"Draw Item\nCard x2",bg:"",icon:"&#128230;",stripe:"#5a3a00",type:"item2"},
+{n:39,label:"Move 5\nBackward",bg:"bg-red",icon:"&#9660;",stripe:"#8b1a1a",type:"move",dir:-1,delta:5},
+{n:40,label:"Teleport\nto Green 37",bg:"bg-gspec",icon:"&#9889;",stripe:"#1a6a1a",type:"teleport",target:37,verse:"Acts 9:3 \u2014 Suddenly a light from heaven flashed around him."}
+];
+
+var ITEM_CARDS=["Sandals of Peace: Move 2 spaces forward.","Scroll of Wisdom: Draw a Faith Card next turn.","Staff of Authority: Collect $2 from the bank.","Torch of Light: Move 3 spaces forward.","Basket of Provision: Gain $3.","Cloak of Comfort: Avoid jail once.","Tent of Meeting: Rest and gain $1."];
+var FAITH_CARDS=["Great Faith: Move 4 spaces forward.","Steadfast Heart: Ignore the next move-backward space.","Boldness: Move to the nearest green space.","Community: All players gain $1.","Perseverance: Roll again this turn.","Encouragement: Give $1 to a player and gain $2."];
+var CONT_CARDS=["Shipwreck! Move 3 spaces backward.","Stoning at Lystra: Go to Jail.","Riot in Ephesus: Move back 2 spaces.","Jerusalem Council: Move forward 2 OR draw a Faith Card.","Conversion Moment: Teleport to space 16.","Spirit Leads: Move forward 5 spaces.","Road to Damascus: Return to Start, collect $5."];
+function rc(d){return d[Math.floor(Math.random()*d.length)];}
+
+var COLORS=["#e63946","#2196F3","#4caf50","#ff9800"];
+var PNAMES=["Player 1","Player 2","Player 3","Player 4"];
+var players=[];
+var current=0;
+var modalCb=null;
+
+function slog(m){document.getElementById("log").textContent=m;}
+
+// Grid: 11 rows x 11 cols (rows/cols 1-indexed)
+// Bottom row (row=11): n=1..11, col=1..11
+// Right col (col=11): n=12..20, row=10..2 (top-to-bottom reversed = row decreases as n increases)
+// Top row (row=1): n=21..31, col=11..1 (right to left)
+// Left col (col=1): n=32..40, row=2..10
+function sg(n){
+  if(n>=1&&n<=11)  return {r:11,c:n};
+  if(n>=12&&n<=20) return {r:10-(n-12),c:11};
+  if(n>=21&&n<=31) return {r:1,c:11-(n-21)};
+  return {r:2+(n-32),c:1};
+}
+
+function showModal(title,html,cb){
+  document.getElementById("mtitle").textContent=title;
+  document.getElementById("mbody").innerHTML=html;
+  document.getElementById("modalbg").classList.add("open");
+  modalCb=cb||null;
+}
+function closeModal(){
+  document.getElementById("modalbg").classList.remove("open");
+  if(modalCb){var f=modalCb;modalCb=null;f();}
+}
+document.getElementById("modalx").onclick=closeModal;
+document.getElementById("mok").onclick=closeModal;
+
+function resolveSpace(pi){
+  var p=players[pi];
+  var sp=SPACES[p.pos];
+  if(!sp)return;
+  var title="Space "+sp.n;
+  var html="<p>"+sp.label.replace(/\n/g," &bull; ")+"</p>";
+  if(sp.verse)html+="<p class='verse'>"+sp.verse+"</p>";
+  switch(sp.type){
+    case"start": p.money+=sp.amount; title="START"; html+="<p>+$"+sp.amount+"! Balance: $"+p.money+"</p>"; break;
+    case"backstart": p.pos=1; title="Back to Start!"; html+="<p>Moved to Space 1.</p>"; break;
+    case"move": var d2=Math.min(40,Math.max(1,p.pos+sp.dir*sp.delta)); p.pos=d2; title=sp.dir>0?"Move Forward":"Move Backward"; html+="<p>Now on space <strong>"+d2+"</strong>.</p>"; break;
+    case"jail": p.jailRounds=1; title="JAIL"; html+="<p>"+p.name+" jailed for 1 round!</p>"; break;
+    case"money": p.money+=sp.amount; title=(sp.amount>0?"Gain $"+sp.amount:"Lose $"+Math.abs(sp.amount)); html+="<p>Balance: $"+p.money+"</p>"; break;
+    case"item": html+="<p>&#128230; <em>"+rc(ITEM_CARDS)+"</em></p>"; title="Item Card"; break;
+    case"item2": html+="<p>&#128230; <em>"+rc(ITEM_CARDS)+"</em></p><p>&#128230; <em>"+rc(ITEM_CARDS)+"</em></p>"; title="2 Item Cards"; break;
+    case"faith": html+="<p>&#10013; <em>"+rc(FAITH_CARDS)+"</em></p>"; title="Faith Card"; break;
+    case"contingency": html+="<p>&#9878; <em>"+rc(CONT_CARDS)+"</em></p>"; title="Contingency Card"; break;
+    case"teleport": p.pos=sp.target; title="Teleport!"; html+="<p>Transported to space <strong>"+sp.target+"</strong>!</p>"; break;
+    case"trade": title="Trade Post"; break;
+    default: title="Nothing Happens";
+  }
+  showModal(title,html,function(){renderTokens();updateMoney();});
+}
+
+function doRoll(){
+  if(players.length===0){slog("Add at least one player first!");return;}
+  var p=players[current];
+  if(p.jailRounds>0){p.jailRounds--;slog(p.name+" is in jail. Skipping. ("+p.jailRounds+" left)");return;}
+  var d1=Math.ceil(Math.random()*6),d2=Math.ceil(Math.random()*6);
+  var pips=["\u2680","\u2681","\u2682","\u2683","\u2684","\u2685"];
+  document.getElementById("die1").textContent=pips[d1-1];
+  document.getElementById("die2").textContent=pips[d2-1];
+  var roll=d1+d2,old=p.pos;
+  p.pos=Math.min(40,Math.max(1,p.pos+roll));
+  slog(p.name+" rolled "+d1+"+"+d2+"="+roll+" \u2192 space "+old+" \u2192 "+p.pos);
+  renderTokens();
+  setTimeout(function(){resolveSpace(current);},320);
+}
+
+function nextTurn(){
+  if(players.length===0)return;
+  current=(current+1)%players.length;
+  slog("It's "+players[current].name+"'s turn! (Space "+players[current].pos+")");
+  updateMoney();
+}
+
+function addPlayer(){
+  if(players.length>=4){slog("Max 4 players.");return;}
+  var i=players.length;
+  players.push({name:PNAMES[i],pos:1,money:0,jailRounds:0,color:COLORS[i]});
+  renderTokens();updateMoney();
+  slog(PNAMES[i]+" joined!");
+}
+
+function updateMoney(){
+  var el=document.getElementById("moneyRow");
+  if(!el)return;
+  var h="";
+  for(var i=0;i<players.length;i++){
+    var p=players[i];
+    h+='<span class="mtag" style="border-color:'+p.color+';color:'+p.color+'">'+p.name+': $'+p.money+'</span>';
+  }
+  el.innerHTML=h;
+}
+
+function renderTokens(){
+  var old=document.querySelectorAll(".token");
+  for(var i=0;i<old.length;i++)old[i].remove();
+  var offs=[{x:3,y:3},{x:15,y:3},{x:3,y:15},{x:15,y:15}];
+  for(var i=0;i<players.length;i++){
+    var p=players[i],g=sg(p.pos);
+    var cell=document.querySelector('[data-r="'+g.r+'"][data-c="'+g.c+'"]');
+    if(!cell)continue;
+    var t=document.createElement("div");
+    t.className="token";
+    t.style.background=p.color;
+    t.style.left=offs[i].x+"px";
+    t.style.top=offs[i].y+"px";
+    t.title=p.name;
+    cell.appendChild(t);
+  }
+}
+
+function buildBoard(){
+  var board=document.getElementById("board");
+  board.style.gridTemplateColumns="88px repeat(9,1fr) 88px";
+  board.style.gridTemplateRows="88px repeat(9,1fr) 88px";
+
+  // Center
+  var cen=document.createElement("div");
+  cen.className="center";
+  cen.style.gridColumn="2/11";
+  cen.style.gridRow="2/11";
+  cen.innerHTML=
+    '<div class="ctitle">ACTS</div>'+
+    '<div class="csub">A Journey Through the Early Church</div>'+
+    '<div class="decks">'+
+      '<div class="deck"><div class="dicon">&#128230;</div><span class="dlabel">Item</span></div>'+
+      '<div class="deck deck-f"><div class="dicon">&#10013;</div><span class="dlabel">Faith</span></div>'+
+      '<div class="deck deck-c"><div class="dicon">&#9878;</div><span class="dlabel">Contingency</span></div>'+
+    '</div>'+
+    '<div class="dice"><div class="die" id="die1">?</div><div class="die" id="die2">?</div></div>'+
+    '<div class="mrow" id="moneyRow"></div>'+
+    '<div class="vquote">&ldquo;You will be my witnesses in Jerusalem, and in all Judea and Samaria, and to the ends of the earth.&rdquo; &mdash; Acts 1:8</div>';
+  board.appendChild(cen);
+
+  for(var n=1;n<=40;n++){
+    var sp=SPACES[n];
+    var g=sg(n);
+    var isC=(n===1||n===11||n===21||n===31);
+    var div=document.createElement("div");
+    div.setAttribute("data-r",g.r);
+    div.setAttribute("data-c",g.c);
+    var cls="cell"+(sp.bg?" "+sp.bg:"")+(isC?" corner":"");
+    var onL=(g.c===1&&!isC),onR=(g.c===11&&!isC);
+    if(onL)cls+=" side-left";
+    if(onR)cls+=" side-right";
+    div.className=cls;
+    div.style.gridRow=g.r;
+    div.style.gridColumn=g.c;
+
+    var stripe=document.createElement("div");
+    stripe.className="stripe";
+    stripe.style.background=sp.stripe||"#aaa";
+
+    var num=document.createElement("span");
+    num.className="cnum";
+    num.textContent=n;
+
+    var ico=document.createElement("span");
+    ico.className="cicon";
+    ico.innerHTML=sp.icon||"";
+
+    var txt=document.createElement("span");
+    txt.className="ctext";
+    txt.textContent=sp.label||"";
+
+    div.appendChild(stripe);
+    div.appendChild(num);
+    div.appendChild(ico);
+    div.appendChild(txt);
+
+    (function(sn){
+      div.addEventListener("click",function(){
+        if(players.length===0)return;
+        if(players[current].pos!==sn)return;
+        resolveSpace(current);
+      });
+    })(n);
+
+    board.appendChild(div);
+  }
+}
+
+document.getElementById("btnAdd").addEventListener("click",addPlayer);
+document.getElementById("btnRoll").addEventListener("click",doRoll);
+document.getElementById("btnNext").addEventListener("click",nextTurn);
+
+buildBoard();
+})();
+</script>
+</body>
+</html>
